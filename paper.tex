@@ -1,7 +1,7 @@
 \documentclass{article}
 \usepackage{spconf,amsmath,graphicx}
 
-\title{Pruning Sequence Search with Attention-Based Embedding}
+\title{Pruning Subsequence Search with Attention-Based Embedding}
 
 \name{Colin Raffel and Daniel P. W. Ellis}
 \address{LabROSA\\
@@ -13,15 +13,22 @@
 \maketitle
 
 \begin{abstract}
+Finding the most similar sequence to a query in a database of sequences can be prohibitively expensive when the database size is large.
+Typically, the scalability of different approaches are dependent on various ``pruning'' techniques, which use heuristics to avoid expensive comparisons against a large subset of the database.
+We present an approximate pruning technique which involves embedding sequences in a Euclidean space.
+Sequences are embedded using a convolutional network with a form of attention which integrates over time, which is trained using matching and non-matching pairs of sequences.
+By using fixed-length embeddings, our pruning method effectively runs in constant time, making it many orders of magnitude faster when compared to full Dynamic Time Warping-based matching.
+We demonstrate the effectiveness of our approach on a large-scale musical score-to-audio recording retrieval task.
 \end{abstract}
 
 \begin{keywords}
+Sequence Retrieval, Attention-Based Models, Convolutional Networks, Dynamic Time Warping, Pruning
 \end{keywords}
 
 \section{Introduction}
 \label{sec:intro}
 
-\cite{rakthanmanon2012searching}
+\cite{rakthanmanon2012searching} \cite{papapetrou2011embedding}
 
 \bibliographystyle{IEEEbib}
 \bibliography{refs}
