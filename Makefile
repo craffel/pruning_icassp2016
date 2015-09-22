@@ -1,10 +1,10 @@
 SRC = paper
 
 all: $(SRC).tex
-	pdflatex $<
-	bibtex $(SRC)
-	pdflatex $<
-	pdflatex $<
+	pdflatex $< 2>&1 | grep --color -E "Warning|Missing|$$"
+	bibtex $(SRC) 2>&1 | grep --color -E "Warning|Missing|$$"
+	pdflatex $< 2>&1 | grep --color -E "Warning|Missing|$$"
+	pdflatex $< 2>&1 | grep --color -E "Warning|Missing|$$"
 	open $(SRC).pdf
 
 check: $(SRC).tex
