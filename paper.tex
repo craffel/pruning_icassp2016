@@ -59,9 +59,39 @@ Our approach is similar in spirit to \cite{papapetrou2011embedding}, except that
 This is thanks to the fact that we utilize an attention-based neural network model which can adapt to any problem setting according to the training data provided.
 Our approach is also constant-time: By mapping sequences to a fixed-length embedding, comparing a query to each database entry is a single Euclidean distance calculation, which does not become less efficient for longer or higher-dimensional sequences.
 
-In the following section, we discuss embedding and attention-based neural network models and propose the variant used in this work.
+In the following section, we discuss embedding and attention-based neural network models, which we use to motivate our proposed model in Section \ref{sec:model}.
 In Section \ref{sec:experiment}, we evaluate the effectiveness of our proposed model on the task of matching musical transcriptions to audio recordings of their corresponding songs in a large database.
 Finally, we discuss possibilities for improvement in Section \ref{sec:discussion}.
+
+\section{Embedding and Attention}
+\label{sec:embedding}
+
+The idea of ``embedding'' is an attractive one: Given data which is provided in a representation which is either inefficient or does not readily reveal factors of interest, can we produce a mapping to fixed-length vectors for which our data has the desired properties?
+Because many simple machine learning methods are very effective given data where Euclidean distance corresponds to some notion of similarity, embedding can make data more amenable to learning and comparison.
+
+As a concrete example, in \cite{schroff2015facenet}, a neural network architecture is used to embed images of faces such that images of the same person have small pairwise distances in the embedded space images of different people have large distances.
+The authors were able to achieve state-of-the-art results on the ``labeled faces the wild'' dataset by simply thresholding the resulting distances to denote ``same person'' or ``different person''.
+In addition, the embedded representation produced qualitatively useful results when performing unsupervised clustering using $k$-means.
+Another highly effective application of embedding is word2vec, which is a family of models for mapping words to a Euclidean space which has desireable properties \cite{mikolov2013distributed}.
+For example, the difference between ``China'' and ``Beijing'' in the embedded space is roughly equivalent to the difference between ``Rome'' and ``Italy''.
+
+The idea of embedding has also been applied to sequences.
+Notably, in \cite{sutskever2014sequence}, a recurrent network was trained to map a sequence of words in a source language to a fixed-length vector, which was then used to generate a sequence of words in a target language, resulting in a quality translation of the original sentence.
+The resulting source-sentence embeddings encoded high-level linguistic characteristics, such as invariance to word order in sentences with the same meaning.
+A benefit of using recurrent networks is their ability to summarize an entire sequence of arbitrary length as a fixed-length vector, which brings the possibility of learning embeddings to sequences.
+
+One issue with using recurrent networks is their difficulty in modeling long-term dependencies.
+In the embedding setting, this may result in the end of the sequence having more of an effect on the embedding than the beginning.
+A recently proposed technique for mitigating this issue is ``attention'' \cite{bahdanau2014neural}.
+Conceptually, an attention-based model includes a mechanism which learns to assign a weighing at each sequence step based on the current and all previous feature vectors.
+When used with recurrent networks, the addition of attention has proven effective in a wide variety of domains including speech recognition, machine translation, and image captioning \cite{cho2015describing}.
+
+At a high level, attention-based models are similar to the common technique of summarizing a sequence of feature vectors by the mean, variance, and occasionally covariance of feature dimensions.
+This simple approach has seen frequent application in the domain of music information retrieval, where it has proven to be surprisingly effective at genre classification \cite{bergstra2006aggregate, tzanetakis2002musical}, instrument classification \cite{deng2008study}, artist recognition \cite{mandel2005song}, and similarity rating prediction \cite{foster2014sequential}.
+Attention-based models can be seen as a generalization of this technique where both the feature representation and a weighted average are both optimized and data-adaptive.
+
+\section{Feed-forward Attention}
+\label{sec:model}
 
 \bibliographystyle{IEEEbib}
 \bibliography{refs}
