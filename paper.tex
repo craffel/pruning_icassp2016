@@ -1,5 +1,7 @@
 \documentclass{article}
 \usepackage{spconf,amsmath,graphicx}
+\usepackage{amssymb}
+\usepackage{enumitem}
 
 \title{Pruning Subsequence Search with Attention-Based Embedding}
 
@@ -80,7 +82,7 @@ Notably, in \cite{sutskever2014sequence}, a recurrent network was trained to map
 The resulting source-sentence embeddings encoded high-level linguistic characteristics, such as invariance to word order in sentences with the same meaning.
 A benefit of using recurrent networks is their ability to summarize an entire sequence of arbitrary length as a fixed-length vector, which brings the possibility of learning embeddings to sequences.
 
-One issue with using recurrent networks is their difficulty in modeling long-term dependencies.
+One issue with using recurrent networks is their difficulty in modeling long-term dependencies \cite{bengio1994learning}.
 In the embedding setting, this may result in the end of the sequence having more of an effect on the embedding than the beginning.
 A recently proposed technique for mitigating this issue is ``attention'' \cite{bahdanau2014neural}.
 Conceptually, an attention-based model includes a mechanism which learns to assign a weighing at each sequence step based on the current and all previous feature vectors.
@@ -92,6 +94,38 @@ Attention-based models can be seen as a generalization of this technique where b
 
 \section{Feed-forward Attention}
 \label{sec:model}
+
+While previous work on attention-based models has focused on recurrent networks, in the present work we will use feed-forward networks for the following reasons:
+First, Recurrent networks have difficulty modelling very long-term dependencies \cite{bengio1994learning}.
+In the experiment described in Section \ref{sec:experiment}, sequences may have thousands of time steps, which is prohibitively long even for sophisticated models such as long short-term memory networks \cite{hochreiter1997long}.
+Second, feed-forward networks are much more efficient to train and evaluate than recurrent networks because their operations can be completely parallelized, whereas recurrent networks must evaluate each time step sequentially.
+Finally, attention provides its own form of temporal modelling due to the fact that it integrates over the entire sequence.
+We therefore propose a ``feed-forward'' variant of attention, which computes a weighting for each sequence step independent of all other steps.
+
+Our simplified variant of attention can be formulated as follows:
+Given a matrix which comprises a sequence of $M$ $D$-dimensional vectors $X \in \mathbb{R}^{M \times D}$, we compute weights $\alpha \in \mathbb{R}^M$ using the following transformation:
+\begin{equation}
+\label{eq:alpha}
+\alpha = \mathrm{softmax}(\sigma(Xw + b))
+\end{equation}
+where
+$$
+\mathrm{softmax}(x)_j = \frac{e^{x_j}}{\sum_{i = 1}^M e^{x_i}}
+$$
+and $\sigma$ is some nonlinear function (throughout this work, we will use $\sigma = \tanh$).
+$w \in \mathbb{R}^D$ and $b \in \mathbb{R}$ are parameters of the transformation, which can be learned as part of a larger feed-forward network model.
+After computing $\alpha$, the weighted average of the vectors in $X$ is computed by
+$$
+\hat{X} = \sum_{i = 1}^M \alpha_i X_{i, :}
+$$
+Conceptually, this attention mechanism can be thought of as using $w$, $b$, and $\sigma$ to compute scalar ``importance'' values for each vector in $X$, which are then normalized using the softmax function and used to compute a weighted mean $\hat{X}$ over all vectors in $X$.
+
+The main difference between this formulation and the one proposed in \cite{bahdanau2014neural, cho2015describing} is that here we are only producing a single weighting $\alpha$ for the entire sequence rather than a different $\alpha$ at each time step.
+This is primarily because our goal in embedding is to produce a single vector for the entire sequence whereas previous applications of attention have mainly focused on sequence-to-sequence transduction.
+As a result, Equation \ref{eq:alpha} does not contain any terms for a previous attention vector or a previous hidden state, because in the present contexts these quantities do not exist.
+The main disadvantage to using attention in this way is that it ignores temporal order by computing an average over the entire sequence.
+However, motivated by the surprising effectiveness of the unweighted/non-adaptive Gaussian results discussed in Section \ref{sec:embedding}, we submit that this approach will be effective and verify its utility in the following section.
+
 
 \bibliographystyle{IEEEbib}
 \bibliography{refs}
