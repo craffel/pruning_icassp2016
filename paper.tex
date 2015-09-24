@@ -70,7 +70,7 @@ Our approach is also constant-time: By mapping sequences to a fixed-length embed
 
 In the following section, we discuss embedding and attention-based neural network models, which we use to motivate our proposed model in Section \ref{sec:model}.
 In Section \ref{sec:experiment}, we evaluate the effectiveness of our proposed model on the task of matching musical transcriptions to audio recordings of their corresponding songs in a large database.
-Finally, we discuss possibilities for improvement in Section \ref{sec:discussion}.
+Finally, we discuss results and possibilities for improvement in Section \ref{sec:results}.
 
 \section{Embedding and Attention}
 \label{sec:embedding}
@@ -134,6 +134,7 @@ The main disadvantage to using attention in this way is that it ignores temporal
 However, motivated by the surprising effectiveness of the unweighted/non-adaptive Gaussian results discussed in Section \ref{sec:embedding}, we submit that this approach will be effective and verify its utility in the following section.
 
 \section{Pruning Experiment}
+\label{sec:experiment}
 
 Recall that the goal of this work is to utilize embeddings to speed up large-scale sequence similarity searches by avoiding comparisons to most sequences in a database.
 Towards this end, we will utilize embeddings as follows:
@@ -194,6 +195,9 @@ As an objective, we computed the Bhattacharrya coefficient \cite{bhattacharyya19
 The best-performing network configuration achieved a Bhattacharrya coefficient of .471 and used a single convolutional layer with 16 filters which were 5 time steps wide by 12 semitones tall, one 2x2 max-pooling layer, three fully connected layers (including the final output layer) with 2048 units each, a learning rate of $10^{-4}$, a momentum of 0.997, $\alpha = 0.935$ and $m = 1$.
 The validation set distance distributions produced by this network after training can be seen in Figure \ref{fig:distances}.
 
+\section{Results}
+\label{sec:results}
+
 To evaluate our system's performance on the task of pruning large-scale subsequence search, we used it to match a held-out test set of 1,282 MIDI files to entries in the Million Song Dataset (MSD) \cite{bertin2011million}.
 Our test set was the same used in \cite{raffel2015large}, for which the correct match in the MSD is known for each MIDI file.
 We first computed embeddings of constant-Q spectrograms for all of the short (30 to 60 second) preview recordings of each entry in the MSD provided by 7digital \cite{schindler2012facilitating}.
@@ -215,16 +219,11 @@ Another way of stating our result, then, is that we can discard 90\% (900,000 en
 Compared to the approach proposed in \cite{raffel2015large} which can prune 99\% of the MSD with 95.9\% confidence, it is substantially less accurate, but it is also over 300 times faster.
 In addition, our approach is fully general, and was able to achieve good performance on a task that would not be possible using the methods proposed in \cite{rakthanmanon2012searching} or \cite{papapetrou2011embedding}.
 
-\section{Future Work}
-\label{sec:discussion}
-
-Larger embedding space.
-
-More convolutional layers.
-
-Recurrent models.
-
-Better negative example sampling
+While our proposed approach has proven effective, there is room for improvement.
+The model may be able to further differentiate between similar and dissimilar sequences if the dimensionality of the embedded space was increased, at the cost of a linear increase in runtime.
+Alternatively, choosing negative example pairs more carefully (e.g.\ using the ``harmonic embedding'' approach of \cite{schroff2015facenet}) may further improve discrimination.
+Finally, evaluating this approach on more traditional sequence retrieval tasks which allow more stringent assumptions to be made about the correct match would facilitate comparison to existing pruning techniques.
+For researchers interested in utilizing and reproducing our results, code is available online.\footnote{\href{http://github.com/craffel/sequence-embedding}{\texttt{http://github.com/craffel/sequence-embedding}}}
 
 \bibliographystyle{IEEEbib}
 \bibliography{refs}
