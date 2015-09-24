@@ -2,6 +2,7 @@
 \usepackage{spconf,amsmath,graphicx}
 \usepackage{amssymb}
 \usepackage{enumitem}
+\usepackage{hyperref}
 
 \title{Pruning Subsequence Search with Attention-Based Embedding}
 
@@ -11,7 +12,7 @@
     New York, NY}
 
 \begin{document}
-
+\ninept
 \maketitle
 
 \begin{abstract}
@@ -126,6 +127,98 @@ As a result, Equation \ref{eq:alpha} does not contain any terms for a previous a
 The main disadvantage to using attention in this way is that it ignores temporal order by computing an average over the entire sequence.
 However, motivated by the surprising effectiveness of the unweighted/non-adaptive Gaussian results discussed in Section \ref{sec:embedding}, we submit that this approach will be effective and verify its utility in the following section.
 
+\section{Pruning Experiment}
+
+Recall that the goal of this work is to utilize embeddings to speed up large-scale sequence similarity searches by avoiding comparisons to most sequences in a database.
+Towards this end, we will utilize embeddings as follows:
+First, given a training set of matching sequences, we will train a feed-forward network with attention to embed each sequence in a Euclidean space where similar sequences have a small distance and dissimilar ones have a large distance.
+Then, we will utilize this network to pre-compute embeddings for all sequences in a database.
+In order to match a query sequence, we will compute the distance between its embedding and all pre-computed embeddings from the database.
+Given a test set of correct matches which are known a priori, the effectiveness of this approach can be measured by determining how often the correct match appears in the $N$ entries with the $N$ smallest embedded distances for varying values of $N$.
+
+We will evaluate this approach on the problem proposed in \cite{raffel2015large}.
+This work seeks to efficiently match a transcription of a piece of music to a recording of the same piece in a large database of recordings.
+The resulting problem boils down to a large-scale subsequence matching problem, where the sequences are particularly long (up to thousands of time steps), the feature dimensionality is relatively high, and the correct match may be a subsequence of the query and vice versa.
+These properties make the traditional DTW pruning methods outlined in Section \ref{sec:intro} ill-suited and provide a setting to evaluate completely general-purpose methods like the one proposed in this work.
+We will outline the details of the experiment below; for a complete discussion, we refer the reader to \cite{raffel2015large}.
+
+The training set consists of a collection of MIDI files which have been matched to audio files.
+MIDI files can be thought of as transcriptions, and can be synthesized in order to obtain an audio recording which is qualitatively similar to the song they are a transcription of.
+In \cite{raffel2015large}, the MIDI and audio pairs are also aligned in time to one another using DTW before being used as training data; the system proposed in this work doesn't require sequences which are aligned in time so we skipped this step.
+The resulting training set contains 5,536 sequence pairs.
+
+As a representation, we use log-magnitude constant-Q spectrograms \cite{brown1991calculation} of the audio files and MIDI syntheses.
+Each constant-Q spectra spanned four octaves, using twelve bins per octave starting from MIDI note C3 (65.4 Hz).
+Each frequency bin in all feature sequences was z-scored (standardized) by its mean and standard deviation over the training set.
+In \cite{raffel2015large}, using shorter sequences was beneficial so constant-Q spectra were aggregated over estimated beat locations.
+The present approach is meant to be able to cope with sequences which may be oversampled in time, so we did not beat-aggregate feature vectors and instead used spectra computed every 46 milliseconds.
+All feature analysis and processing was accomplished with \texttt{librosa} \cite{mcfee2015librosa, mcfee2015librosa_scipy}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{distances.pdf}
+  \caption{Histograms of embedded distances for positive and negative example pairs in the validation set for our best-performing embedding network.  Note that the x-axis is log-scaled.}
+  \label{fig:distances}
+\end{figure}
+
+As a model, we also mimic \cite{raffel2015large} and use a siamese architecture consisting of two parallel convolutional networks followed by two parallel fully-connected networks.
+The use of a convolutional ``front end'' allows our model to learn exploit both time and frequency invariances in the constant-Q spectra while reducing the number of model parameters.
+The main difference in models is the addition of the attention mechanism proposed in Section \ref{sec:model}, which we place between the convolutional network and the fully-connected network.
+In this way, the convolutional network can be seen as transforming a ``raw'' input sequence to a sequence of vectors in a learned representation, which are then aggregated using the attention mechanism and mapped to the embedded space using the fully-connected network.
+We used an embedding space dimensionality of 128.
+
+To train the networks, we pass pairs of ``matching'' and ``non-matching'' sequences and utilize a loss function which encourages matching pairs to have similar embeddings and non-matching pairs to have dissimilar ones.
+We utilize the same loss function as in \cite{raffel2015large}: Given a pair of positive sequences $X_p, Y_p$ and a set of negative sequences $X_n, Y_n$, we attempt to minimize
+$$
+\mathcal{L} = \|f(X_p) - g(Y_p)\|_2^2 - \alpha \max(0, m - \|f(X_n) - g(Y_n)\|_2)^2
+$$
+where $f$ and $g$ are the functions of the two networks being trained, $\alpha$ is a parameter controlling the importance of separating dissimilar pairs, and $m$ is the target separation for dissimilar pairs.
+To construct negative pair examples, we simply randomly choose non-matched MIDI/audio sequence pairs from the training set.
+
+As in \cite{raffel2015large} we utilize rectified linear units throughout the network, except on the final output layer which used $\tanh$ units.
+All weights were initialized using He et.\ al.'s method \cite{he2015delving} and all biases were initialized to zero.
+The networks were optimized with respect to $\mathcal{L}$ using Nesterov's accelerated gradient \cite{sutskever2013importance} with mini-batches of 20 similar and dissimilar pairs.
+All sequences were either randomly cropped or padded to the median sequence length in each modality.
+Every 100 minibatches, we computed the mean loss $\mathcal{L}$ on a held-out validation set consisting of 10\% of the training set; when it was less than .99 times the previous lowest validation loss, we trained for 500 more minibatches.
+
+To choose hyperparameter settings, we used the Bayesian optimization software package \texttt{spearmint} \cite{snoek2012practical}.
+We optimized the number of convolutional and pooling layers, the number of fully-connected layers, the learning rate and momentum, and the loss parameters $\alpha$ and $m$.
+We also experimented with using RMSProp \cite{tieleman2012lecture} and adam \cite{kingma2014adam} for optimization and dropout \cite{hinton2012improving} in the fully-connected layers for regularization, but did not find them to be beneficial.
+As an objective, we computed the Bhattacharrya coefficient \cite{bhattacharyya1943measure} between the distributions of matching and non-matching pairs in the validation set.
+The best-performing network configuration achieved a Bhattacharrya coefficient of .471 and used a single convolutional layer with 16 filters which were 5 time steps wide by 12 semitones tall, one 2x2 max-pooling layer, three fully connected layers (including the final output layer) with 2048 units each, a learning rate of $10^{-4}$, a momentum of 0.997, $\alpha = 0.935$ and $m = 1$.
+The validation set distance distributions produced by this network after training can be seen in Figure \ref{fig:distances}.
+
+To evaluate our system's performance on the task of pruning large-scale subsequence search, we used it to match a held-out test set of 1,282 MIDI files to entries in the Million Song Dataset (MSD) \cite{bertin2011million}.
+Our test set was the same used in \cite{raffel2015large}, for which the correct match in the MSD is known for each MIDI file.
+We first computed embeddings of constant-Q spectrograms for all of the short (30 to 60 second) preview recordings of each entry in the MSD provided by 7digital \cite{schindler2012facilitating}.
+Then, we computed a constant-Q spectrogram and its embedding for each MIDI file in the test set.
+To determine performance, we computed the Euclidean distance between the embedding of each MIDI file and the embeddings of every entry in the MSD and determined how many entries had a distance that was smaller than the correct match.
+As a baseline, we performed the same evaluation except using the concatenated mean and standard deviation of the feature dimensions of constant-Q spectrograms as the embedding.
+The results can be seen in Figure \ref{fig:ranks}.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{ranks.pdf}
+  \caption{Proportion of MIDI files in the test set whose correct match appeared below a given rank, based on embedding distances.}
+  \label{fig:ranks}
+\end{figure}
+
+To summarize these results, using the proposed method the correct match appeared in the top 100,000 matches 91.3\% of the time using embedding distance and only 74.4\% of the time using the mean and standard deviation of spectrograms.
+As noted in \cite{raffel2015large}, matching a single MIDI file to the MSD using dynamic time warping distance would take about three hours; the proposed approach takes about 360 milliseconds per file using a non-optimized Python implementation.
+Another way of stating our result, then, is that we can discard 90\% (900,000 entries) of the MSD with 91.3\% confidence using a pruning method which is about 30,000 times faster than the standard DTW-based matching approach.
+Compared to the approach proposed in \cite{raffel2015large} which can prune 99\% of the MSD with 95.9\% confidence, it is substantially less accurate, but it is also over 300 times faster.
+In addition, our approach is fully general, and was able to achieve good performance on a task that would not be possible using the methods proposed in \cite{rakthanmanon2012searching} or \cite{papapetrou2011embedding}.
+
+\section{Future Work}
+\label{sec:discussion}
+
+Larger embedding space.
+
+More convolutional layers.
+
+Recurrent models.
+
+Better negative example sampling
 
 \bibliographystyle{IEEEbib}
 \bibliography{refs}
