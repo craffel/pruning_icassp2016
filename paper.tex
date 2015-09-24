@@ -57,6 +57,12 @@ The resulting algorithm is approximate, but provided state-of-the-art rsults bot
 This technique relies on the same assumptions as the pruning methods described in \cite{rakthanmanon2012searching}.
 In addition, it presents a trade-off between efficiency and accuracy where more reference sequences generally improve accuracy but require more full DTW calculations to be made, which can be prohibitively expensive for very long or very high-dimensional sequences.
 
+In \cite{raffel2015large}, a more general approximate method is proposed where a neural network model is used to map and downsample sequences of feature vectors to shorter sequences of bit vectors.
+Computing the distance between bit vectors can be achieved by a single exclusive-or operation followed by a table lookup, so this approach vastly improves the efficiency of the local distance calculations involved in DTW.
+Furthermore, downsampling the sequences gives quadratic speed gains.
+In an experiment matching transcriptions of musical pieces to audio recordings in a large database, using this method allowed for 99\% of the entries in the database to be pruned with high confidence.
+However, this approach still relies on DTW which is quadratic-time and therefore provides room for efficiency improvements.
+
 Motivated by the above issues, we propose a learning-based system for producing sequence embeddings for approximate matching.
 Our approach is similar in spirit to \cite{papapetrou2011embedding}, except that it is fully general, i.e.\ it does not rely on any assumptions about the alignment length or whether the query is a subsequence of its match.
 This is thanks to the fact that we utilize an attention-based neural network model which can adapt to any problem setting according to the training data provided.
