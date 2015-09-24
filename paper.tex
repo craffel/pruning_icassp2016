@@ -96,7 +96,7 @@ Conceptually, an attention-based model includes a mechanism which learns to assi
 When used with recurrent networks, the addition of attention has proven effective in a wide variety of domains including speech recognition, machine translation, and image captioning \cite{cho2015describing}.
 
 At a high level, attention-based models are similar to the common technique of summarizing a sequence of feature vectors by the mean, variance, and occasionally covariance of feature dimensions.
-This simple approach has seen frequent application in the domain of music information retrieval, where it has proven to be surprisingly effective at genre classification \cite{bergstra2006aggregate, tzanetakis2002musical}, instrument classification \cite{deng2008study}, artist recognition \cite{mandel2005song}, and similarity rating prediction \cite{foster2014sequential}.
+This simple approach has seen frequent application in the domain of music information retrieval, where it has proven to be surprisingly effective at genre classification \cite{tzanetakis2002musical}, instrument classification \cite{deng2008study}, artist recognition \cite{mandel2005song}, and similarity rating prediction \cite{foster2014sequential}.
 Attention-based models can be seen as a generalization of this technique where both the feature representation and a weighted average are both optimized and data-adaptive.
 
 \section{Feed-forward Attention}
@@ -205,7 +205,7 @@ We implemented our model using \texttt{lasagne} \cite{dieleman2015lasagne}, whic
 
 To choose hyperparameter settings, we used the Bayesian optimization software package \texttt{spearmint} \cite{snoek2012practical}.
 We optimized the number of convolutional and pooling layers, the number of fully-connected layers, the learning rate and momentum, and the loss parameters $\alpha$ and $m$.
-We also experimented with using RMSProp \cite{tieleman2012lecture} and adam \cite{kingma2014adam} for optimization and dropout \cite{hinton2012improving} in the fully-connected layers for regularization, but did not find them to be beneficial.
+We also experimented with using dropout \cite{hinton2012improving} in the fully-connected layers for regularization, but did not find it to be beneficial.
 As an objective, we computed the Bhattacharrya coefficient \cite{bhattacharyya1943measure} between the distributions of matching and non-matching pairs in the validation set.
 The best-performing network configuration achieved a Bhattacharrya coefficient of .471 and used a single convolutional layer with 16 filters which were 5 time steps wide by 12 semitones tall, one 2x2 max-pooling layer, two fully connected hidden layers with 2048 units each, a learning rate of $10^{-4}$, a momentum of 0.997, $\alpha = 0.935$ and $m = 1$.
 The validation set distance distributions produced by this network after training can be seen in Figure \ref{fig:distances}.
