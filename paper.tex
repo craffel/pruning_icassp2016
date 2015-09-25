@@ -81,7 +81,7 @@ Because many simple machine learning methods are very effective given data where
 As a concrete example, in \cite{schroff2015facenet}, a neural network architecture is used to embed images of faces such that images of the same person have small pairwise distances in the embedded space and images of different people have large distances.
 The authors were able to achieve state-of-the-art results on the ``labeled faces the wild'' dataset by simply thresholding the resulting distances to denote ``same person'' or ``different person''.
 In addition, the embedded representation produced qualitatively useful results when performing unsupervised clustering using $k$-means.
-Another highly effective application of embedding is word2vec, which is a family of models for mapping words to a Euclidean space which has desireable properties \cite{mikolov2013distributed}.
+Another highly effective application of embedding is word2vec, which is a family of models for mapping words to a Euclidean space which has desirable properties \cite{mikolov2013distributed}.
 For example, the difference between ``China'' and ``Beijing'' in the embedded space is roughly equivalent to the difference between ``Rome'' and ``Italy''.
 
 The idea of embedding has also been applied to sequences.
@@ -201,7 +201,7 @@ All weights were initialized using He et.\ al.'s method \cite{he2015delving} and
 The networks were optimized with respect to $\mathcal{L}$ using Nesterov's accelerated gradient \cite{sutskever2013importance} with mini-batches of 20 similar and dissimilar pairs.
 All sequences were either randomly cropped or padded to the median sequence length in each modality.
 Every 100 minibatches, we computed the mean loss $\mathcal{L}$ on a held-out validation set consisting of 10\% of the training set; when it was less than .99 times the previous lowest validation loss, we trained for 500 more minibatches.
-We implemented our model using \texttt{lasagne} \cite{dieleman2015lasagne}, which is built on Theano \cite{bergstra2010theano, bastien2012theano}.
+We implemented our model using \texttt{lasagne} \cite{dieleman2015lasagne}, which is built on \texttt{theano} \cite{bergstra2010theano, bastien2012theano}.
 
 To choose hyperparameter settings, we used the Bayesian optimization software package \texttt{spearmint} \cite{snoek2012practical}.
 We optimized the number of convolutional and pooling layers, the number of fully-connected layers, the learning rate and momentum, and the loss parameters $\alpha$ and $m$.
