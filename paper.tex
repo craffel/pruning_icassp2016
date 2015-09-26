@@ -6,22 +6,22 @@
 
 \title{Pruning Subsequence Search with Attention-Based Embedding}
 
-\name{Colin Raffel and Daniel P. W. Ellis}
+\name{Colin Raffel and Daniel P. W. Ellis
+\thanks{This work was supported by NSF project IIS-1117015.}}
 \address{LabROSA\\
     Columbia University\\
     New York, NY}
-
 \begin{document}
 \ninept
 \maketitle
 
 \begin{abstract}
-Finding the most similar sequence to a query in a database of sequences can be prohibitively expensive when the database size is large.
-Typically, the scalability of different approaches are dependent on various ``pruning'' techniques, which use heuristics to avoid expensive comparisons against a large subset of the database.
+Searching a large database to find a sequence that is most similar to a query can be prohibitively expensive, particularly if individual sequence comparisons involve complex operations such as warping. 
+To achieve scalability, ``pruning'' heuristics are typically employed to minimize the portion of the database that must be searched with more complex matching. 
 We present an approximate pruning technique which involves embedding sequences in a Euclidean space.
-Sequences are embedded using a convolutional network with a form of attention which integrates over time, which is trained using matching and non-matching pairs of sequences.
-By using fixed-length embeddings, our pruning method effectively runs in constant time, making it many orders of magnitude faster when compared to full dynamic time warping-based matching.
-We demonstrate the effectiveness of our approach on a large-scale musical score-to-audio recording retrieval task.
+Sequences are embedded using a convolutional network with a form of attention that integrates over time, trained on matching and non-matching pairs of sequences.
+By using fixed-length embeddings, our pruning method effectively runs in constant time, making it many orders of magnitude faster than full dynamic time warping-based matching for large datasets.
+We demonstrate our approach on a large-scale musical score-to-audio recording retrieval task.
 \end{abstract}
 
 \begin{keywords}
@@ -31,57 +31,58 @@ Sequence Retrieval, Attention-Based Models, Convolutional Networks, Dynamic Time
 \section{Introduction}
 \label{sec:intro}
 
-Sequences\footnote{In this work, we refer to ``signals'' by the slightly more generic term ``sequences'', but the two can be used interchangeably.} are a natural way of representing data in a wide range of fields, including multimedia, environmental sciences, natural language processing, and biology.
+Sequences\footnote{In this work, we refer to ``signals'' with the more generic term ``sequences'', but the two can be used interchangeably.} are a natural way of representing data in a wide range of fields, including multimedia, environmental sciences, natural language processing, and biology.
 The proliferation of sensors and decreasing cost of storage in recent years has resulted in the creation of very large databases of sequences.
 Given such a database, a fundamental task is to find the database entry which is the most similar to a query.
 However, this task can be prohibitively expensive depending on both the method used to compare sequences and the size of the database.
 
 An effective way to compare sequences is the dynamic time warping (DTW) distance, first proposed in the context of speech utterances \cite{sakoe1978dynamic}.
-DTW first computes an optimal alignment of the two sequences of feature vectors being compared, and then reports their distance as the total distance among aligned feature vectors.
-The alignment step makes DTW much more robust to phase or offset errors than typical distance metrics, such as the Euclidean distance \cite{rakthanmanon2012searching}.
+DTW first computes an optimal alignment of the two sequences of feature vectors being compared, and then reports their distance as the total distance between aligned feature vectors.
+The alignment step makes DTW much more robust to timing and rate differences than more common metrics such as Euclidean distance \cite{rakthanmanon2012searching}.
 DTW also naturally extends to the setting where subsequence matching is allowed.
-Using dynamic programming, the optimal DTW alignment can be found in time quadratic in the length of the sequences.
-Despite this optimization, naive application of DTW to nearest-neighbor retrieval of the most similar sequence in a database can be prohibitively expensive.
-Other dynamic programming-based ``edit distance'' metrics are used when appropriate, and are similar in both their effectiveness and inefficiency.
+Using dynamic programming, the optimal DTW alignment can be found in time quadratic in the length of the sequences, but even with this optimization, naive application of DTW to nearest-neighbor retrieval  can be prohibitively expensive.
+Other dynamic programming-based ``edit distance'' metrics are used when appropriate, and are similar in both their effectiveness and expense.
 
 To mitigate this issue, a variety of ``pruning methods'' have been proposed.
-The idea behind these techniques is to use heuristics to avoid computing the full DTW alignment for a large proportion of the database.
-\cite{rakthanmanon2012searching} gives a broad overview of different pruning methods, and shows that their application makes exact retrieval feasible in extremely large (e.g.\ trillions of sequences) databases.
+The idea behind these techniques is to use heuristics to limit the most expensive comparisons to 
+a small portion of the database.
+\cite{rakthanmanon2012searching} gives a broad overview of different pruning methods, and shows that their application makes exact retrieval feasible in extremely large databases (e.g.\ trillions of sequences).
 However, these methods rely on various assumptions, including that the query sequence is a subsequence of its correct match and the length of the alignment path is known a priori.
 
-An alternative approach is to replace the DTW search with a surrogate problem which is faster to solve.
-For example, \cite{papapetrou2011embedding} proposes a technique which maps sequences to a fixed-length embedding, which avoids DTW calculation when matching the query to the database.
-The embedding is constructed by pre-computing the DTW distance between each sequence in the database and a small collection of ``reference'' sequences, which are chosen to optimize retrieval accuracy.
-Then, to match a query sequence to the database, its DTW distance is computed against the same collection of reference sequences, and the resulting vector of DTW distances is matched against the database of embeddings using a standard Euclidean distance-based nearest-neighbor search.
+An alternative approach is to replace the DTW search with a surrogate problem that is faster to solve.
+For example, \cite{papapetrou2011embedding} proposes a technique which maps sequences to a fixed-length embedding to avoid DTW calculation when matching the query to the database.
+The embedding is constructed by pre-computing the DTW distance between each sequence in the database and a small collection of ``reference'' sequences that are chosen to optimize retrieval accuracy.
+Then, to match a query sequence to the database, its DTW distance is computed against the reference sequences, and the resulting vector of DTW distances is matched against the database of embeddings using a standard Euclidean distance-based nearest-neighbor search.
 The resulting algorithm is approximate, but provided state-of-the-art results both in terms of accuracy and speed.
 This technique relies on the same assumptions as the pruning methods described in \cite{rakthanmanon2012searching}.
-In addition, it presents a trade-off between efficiency and accuracy where more reference sequences generally improve accuracy but require more full DTW calculations to be made, which can be prohibitively expensive for very long or very high-dimensional sequences.
+In addition, it presents a trade-off between efficiency and accuracy, since more reference sequences generally improve accuracy but require more full DTW calculations to be made, increasing the expense for very long or very high-dimensional sequences.
 
 In \cite{raffel2015large}, a more general approximate method is proposed where a neural network model is used to map and downsample sequences of feature vectors to shorter sequences of bit vectors.
 Computing the distance between bit vectors can be achieved by a single exclusive-or operation followed by a table lookup, so this approach vastly improves the efficiency of the local distance calculations involved in DTW.
 Furthermore, downsampling the sequences gives quadratic speed gains.
 In an experiment matching transcriptions of musical pieces to audio recordings in a large database, using this method allowed for 99\% of the entries in the database to be pruned with high confidence.
-However, this approach still relies on DTW which is quadratic-time and therefore provides room for efficiency improvements.
+However, the efficiency of this approach is still limited by its reliance on DTW.
 
 Motivated by the above issues, we propose a learning-based system for producing sequence embeddings for approximate matching.
 Our approach is similar in spirit to \cite{papapetrou2011embedding}, except that it is fully general, i.e.\ it does not rely on any assumptions about the alignment length or whether the query is a subsequence of its match.
 This is thanks to the fact that we utilize an attention-based neural network model which can adapt to any problem setting according to the training data provided.
-Our approach is also constant-time: By mapping sequences to a fixed-length embedding, comparing a query to each database entry is a single Euclidean distance calculation, which does not become less efficient for longer or higher-dimensional sequences.
+Our approach is also constant-time in the query length: By mapping sequences to a fixed-length embedding, comparing a query to each database entry is a single Euclidean distance calculation, which does not become less efficient for longer or higher-dimensional sequences.
 
-In the following section, we discuss embedding and attention-based neural network models, which we use to motivate our proposed model in Section \ref{sec:model}.
+In the next section we discuss embedding and attention-based neural networks, which we use to motivate our proposed model in Section \ref{sec:model}.
 In Section \ref{sec:experiment}, we evaluate the effectiveness of our proposed model on the task of matching musical transcriptions to audio recordings of their corresponding songs in a large database.
 Finally, we discuss results and possibilities for improvement in Section \ref{sec:results}.
 
 \section{Embedding and Attention}
 \label{sec:embedding}
 
-The idea of ``embedding'' is an attractive one: Given data which is provided in a representation which is either inefficient or does not readily reveal factors of interest, can we produce a mapping to fixed-length vectors for which our data has the desired properties?
-Because many simple machine learning methods are very effective given data where Euclidean distance corresponds to some notion of similarity, embedding can make data more amenable to learning and comparison.
+The idea behind ``embedding'' is attractive: Given data in a representation which is either inefficient or does not readily reveal factors of interest, can we produce a mapping to fixed-length vectors that possess
+these desired properties?
+Because many simple machine learning methods are particularly effective given data where Euclidean distance corresponds to some notion of similarity, embedding can make data more amenable to learning and comparison.
 
 As a concrete example, in \cite{schroff2015facenet}, a neural network architecture is used to embed images of faces such that images of the same person have small pairwise distances in the embedded space and images of different people have large distances.
 The authors were able to achieve state-of-the-art results on the ``labeled faces the wild'' dataset by simply thresholding the resulting distances to denote ``same person'' or ``different person''.
 In addition, the embedded representation produced qualitatively useful results when performing unsupervised clustering using $k$-means.
-Another highly effective application of embedding is word2vec, which is a family of models for mapping words to a Euclidean space which has desirable properties \cite{mikolov2013distributed}.
+Another striking application of embedding is word2vec, which is a family of models for mapping words to a Euclidean space with desirable properties \cite{mikolov2013distributed}.
 For example, the difference between ``China'' and ``Beijing'' in the embedded space is roughly equivalent to the difference between ``Rome'' and ``Italy''.
 
 The idea of embedding has also been applied to sequences.
@@ -89,24 +90,24 @@ Notably, in \cite{sutskever2014sequence}, a recurrent network was trained to map
 The resulting source-sentence embeddings encoded high-level linguistic characteristics, such as invariance to word order in sentences with the same meaning.
 A benefit of using recurrent networks is their ability to summarize an entire sequence of arbitrary length as a fixed-length vector, which brings the possibility of learning embeddings to sequences.
 
-One issue with using recurrent networks is their difficulty in modeling long-term dependencies \cite{bengio1994learning}.
-In the embedding setting, this may result in the end of the sequence having more of an effect on the embedding than the beginning.
-A recently proposed technique for mitigating this issue is ``attention'' \cite{bahdanau2014neural}.
-Conceptually, an attention-based model includes a mechanism which learns to assign a weight to each sequence step based on the current and all previous feature vectors.
+Recurrent networks, however, have difficulty in modeling long-term dependencies \cite{bengio1994learning}.
+In the embedding setting, this may result in the end of the sequence having a greater impact on the embedding than the beginning.
+A recent technique for mitigating this issue has been dubbed ``attention'' \cite{bahdanau2014neural}.
+Conceptually, an attention-based model includes a mechanism which learns to assign a weight to each sequence step based on the current and previous feature vectors.
 When used with recurrent networks, the addition of attention has proven effective in a wide variety of domains including speech recognition, machine translation, and image captioning \cite{cho2015describing}.
 
-At a high level, attention-based models are similar to the common technique of summarizing a sequence of feature vectors by the mean, variance, and occasionally covariance of feature dimensions.
+Attention-based models may be compared to the common technique of summarizing a sequence of feature vectors by the mean, variance, and occasionally covariance of feature dimensions.
 This simple approach has seen frequent application in the domain of music information retrieval, where it has proven to be surprisingly effective at genre classification \cite{tzanetakis2002musical}, instrument classification \cite{deng2008study}, artist recognition \cite{mandel2005song}, and similarity rating prediction \cite{foster2014sequential}.
-Attention-based models can be seen as a generalization of this technique where both the feature representation and a weighted average are both optimized and data-adaptive.
+Attention-based models can be seen as a generalization of this technique where both the feature representation and the weighting used in constructing the average are optimized and data-adaptive.
 
 \section{Feed-forward Attention}
 \label{sec:model}
 
 While previous work on attention-based models has focused on recurrent networks, in the present work we will use feed-forward networks for the following reasons:
-First, recurrent networks have difficulty modelling very long-term dependencies \cite{bengio1994learning}.
+First, recurrent networks have difficulty modeling very long-term dependencies \cite{bengio1994learning}.
 In the experiment described in Section \ref{sec:experiment}, sequences may have thousands of time steps, which is prohibitively long even for sophisticated models such as long short-term memory networks \cite{hochreiter1997long}.
 Second, feed-forward networks are much more efficient to train and evaluate than recurrent networks because their operations can be completely parallelized, whereas recurrent networks must evaluate each time step sequentially.
-Finally, attention provides its own form of temporal modelling due to the fact that it integrates over the entire sequence.
+Finally, attention provides its own form of temporal modeling because it integrates over the entire sequence.
 We therefore propose a ``feed-forward'' variant of attention, which computes a weighting for each sequence step independent of all other steps.
 
 Our simplified variant of attention can be formulated as follows:
@@ -143,7 +144,7 @@ However, motivated by the surprising effectiveness of the unweighted/non-adaptiv
   \label{fig:distances}
 \end{figure}
 
-Recall that the goal of this work is to utilize embeddings to speed up large-scale sequence similarity searches by avoiding comparisons to most sequences in a database.
+Recall that the goal of this work is to employ embeddings to speed up large-scale sequence similarity searches by avoiding comparisons for most sequences in a database.
 Towards this end, we will utilize embeddings as follows:
 First, given a training set of matching sequences, we will train a feed-forward network with attention to embed each sequence in a Euclidean space where similar sequences have a small distance and dissimilar ones have a large distance.
 Then, we will utilize this network to pre-compute embeddings for all sequences in a database.
@@ -162,7 +163,7 @@ In \cite{raffel2015large}, the MIDI and audio pairs are also aligned in time to 
 The resulting training set contains 5,536 sequence pairs.
 
 As a representation, we use log-magnitude constant-Q spectrograms \cite{brown1991calculation} of the audio files and MIDI syntheses.
-Each constant-Q spectra spanned four octaves, using twelve bins per octave starting from MIDI note C3 (65.4 Hz).
+Each constant-Q spectrum spanned four octaves, using twelve bins per octave starting from MIDI note C3 (65.4 Hz).
 Each frequency bin in all feature sequences was z-scored (standardized) by its mean and standard deviation over the training set.
 In \cite{raffel2015large}, using shorter sequences was beneficial so constant-Q spectra were aggregated over estimated beat locations.
 The present approach is meant to be able to cope with sequences which may be oversampled in time, so we did not beat-aggregate feature vectors and instead used spectra computed every 46 milliseconds.
@@ -175,7 +176,7 @@ All feature analysis and processing was accomplished with \texttt{librosa} \cite
   \label{fig:ranks}
 \end{figure}
 
-As a model, we also mimic \cite{raffel2015large} and use a siamese architecture consisting of two parallel convolutional networks followed by two parallel fully-connected networks.
+For a model, we follow \cite{raffel2015large} by using a siamese architecture consisting of two parallel convolutional networks followed by two parallel fully-connected networks.
 The use of a convolutional ``front end'' allows our model to exploit both time and frequency invariances in the constant-Q spectra while reducing the number of model parameters.
 The main difference in models is the addition of the attention mechanism proposed in Section \ref{sec:model}, which we place between the convolutional network and the fully-connected network.
 In this way, the convolutional network can be seen as transforming a ``raw'' input sequence to a sequence of vectors in a learned representation, which are then aggregated using the attention mechanism and mapped to the embedded space using the fully-connected network.
