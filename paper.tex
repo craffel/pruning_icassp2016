@@ -41,7 +41,7 @@ DTW first computes an optimal alignment of the two sequences of feature vectors 
 The alignment step makes DTW much more robust to timing and rate differences than more common metrics such as Euclidean distance \cite{rakthanmanon2012searching}.
 DTW also naturally extends to the setting where subsequence matching is allowed.
 Using dynamic programming, the optimal DTW alignment can be found in time quadratic in the length of the sequences, but even with this optimization, naive application of DTW to nearest-neighbor retrieval  can be prohibitively expensive.
-Other dynamic programming-based ``edit distance'' metrics are used when appropriate, and are similar in both their effectiveness and expense.
+Other dynamic programming-based ``edit distance'' measures are used when appropriate, and are similar in both their effectiveness and expense.
 
 To mitigate this issue, a variety of ``pruning methods'' have been proposed.
 The idea behind these techniques is to use heuristics to limit the most expensive comparisons to 
@@ -140,7 +140,7 @@ However, motivated by the surprising effectiveness of the unweighted/non-adaptiv
 \begin{figure}[t]
   \centering
   \includegraphics[width=\columnwidth]{distances.pdf}
-  \caption{Histograms of embedded distances for positive and negative example pairs in the validation set for our best-performing embedding network.  Note that the x-axis is log-scaled.}
+  \caption{Histograms of embedded distances for positive and negative example pairs in the validation set for our best-performing embedding network (c.f.\ \cite{raffel2015large} Figure 3).  Note that the x-axis is log-scaled.}
   \label{fig:distances}
 \end{figure}
 
