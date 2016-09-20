@@ -163,7 +163,7 @@ In \cite{raffel2015large}, the MIDI and audio pairs are also aligned in time to 
 The resulting training set contains 5,536 sequence pairs.
 
 As a representation, we use log-magnitude constant-Q spectrograms \cite{brown1991calculation} of the audio files and MIDI syntheses.
-Each constant-Q spectrum spanned four octaves, using twelve bins per octave starting from MIDI note C3 (65.4 Hz).
+Each constant-Q spectrum spanned four octaves, using twelve bins per octave starting from MIDI note C2 (65.4 Hz).
 Each frequency bin in all feature sequences was z-scored (standardized) by its mean and standard deviation over the training set.
 In \cite{raffel2015large}, using shorter sequences was beneficial so constant-Q spectra were aggregated over estimated beat locations.
 The present approach is meant to be able to cope with sequences which may be oversampled in time, so we did not beat-aggregate feature vectors and instead used spectra computed every 46 milliseconds.
@@ -185,7 +185,7 @@ We used an embedding space dimensionality of 128.
 To train the networks, we pass pairs of ``matching'' and ``non-matching'' sequences and utilize a loss function which encourages matching pairs to have similar embeddings and non-matching pairs to have dissimilar ones.
 We use the same loss function as in \cite{raffel2015large}: Given a pair of positive sequences $X_p, Y_p$ and a pair of negative sequences $X_n, Y_n$, we attempt to minimize
 $$
-\mathcal{L} = \|f(X_p) - g(Y_p)\|_2^2 - \alpha \max(0, m - \|f(X_n) - g(Y_n)\|_2)^2
+\mathcal{L} = \|f(X_p) - g(Y_p)\|_2^2 + \alpha \max(0, m - \|f(X_n) - g(Y_n)\|_2)^2
 $$
 where $f$ and $g$ are the functions of the two networks being trained, $\alpha$ is a parameter controlling the importance of separating dissimilar pairs, and $m$ is the target separation for dissimilar pairs.
 To construct negative examples, we simply randomly choose non-matched MIDI/audio sequence pairs from the training set.
